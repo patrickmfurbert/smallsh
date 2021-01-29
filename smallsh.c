@@ -51,6 +51,7 @@ void get_command(void) {
         size_t len = MAXCHARS;
         ssize_t chars_read;
         char* command = (char*)malloc(len * sizeof(char));
+        
 
 
         //show prompt for command line
@@ -63,6 +64,13 @@ void get_command(void) {
 
         //check for error
         //pass for now
+        
+        //replace '\n' with '\0'
+        if(chars_read != -1 && command[chars_read-1] == '\n'){
+            command[chars_read-1] = '\0';
+        }
+
+        fprintf(stdout, "chars_read: %ld | last char: %d\n", chars_read, command[chars_read-1]);
 
         //check length of command didn't exceed MAXCHARS
         if(strlen(command) > MAXCHARS){
@@ -82,17 +90,6 @@ void get_command(void) {
 
         //parser
 
-        //print
-        fprintf(stdout, "%s", command);
-        fprintf(stdout, "strcmp: %d | strlen: %ld | chars_read: %ld | last character: %d\n", strcmp(command, "exit"), strlen(command), chars_read, command[strlen(command)-1]);
-        //change exit variable if command = exit
-
-        //change last character in string
-        command[strlen(command)-1] = '\0';
-
-        fprintf(stdout, "strcmp: %d | strlen: %ld | chars_read: %ld | last character: %d\n", strcmp(command, "exit"), strlen(command), chars_read, command[strlen(command)-1]);
-
-        fprintf(stdout, "len \"exit\" : %ld\n", strlen("exit"));
         if(!strcmp(command, "exit")){
             exit = 0;
         }
