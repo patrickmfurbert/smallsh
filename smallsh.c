@@ -48,9 +48,10 @@ void get_command(void) {
     do{
 
         //variables for getline
-        char* command = NULL;
-        size_t len = 0;
+        size_t len = MAXCHARS;
         ssize_t chars_read;
+        char* command = (char*)malloc(len * sizeof(char));
+
 
         //show prompt for command line
         fprintf(stdout, ": ");
@@ -58,7 +59,7 @@ void get_command(void) {
         //flush the input
 
         //get input from user
-        chars_read = getline(&command, len, stdin); //--> getline calls realloc if the buffer is not larger enough
+        chars_read = getline(&command, &len, stdin); //--> getline calls realloc if the buffer is not larger enough
 
         //check for error
         //pass for now
