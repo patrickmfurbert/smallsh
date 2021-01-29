@@ -84,8 +84,15 @@ void get_command(void) {
 
         //print
         fprintf(stdout, "%s", command);
-
+        fprintf(stdout, "strcmp: %d | strlen: %ld | chars_read: %ld | last character: %d\n", strcmp(command, "exit"), strlen(command), chars_read, command[strlen(command)-1]);
         //change exit variable if command = exit
+
+        //change last character in string
+        command[strlen(command)-1] = '\0';
+
+        fprintf(stdout, "strcmp: %d | strlen: %ld | chars_read: %ld | last character: %d\n", strcmp(command, "exit"), strlen(command), chars_read, command[strlen(command)-1]);
+
+        fprintf(stdout, "len \"exit\" : %ld\n", strlen("exit"));
         if(!strcmp(command, "exit")){
             exit = 0;
         }
