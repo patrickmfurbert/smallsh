@@ -12,6 +12,8 @@ Description:
 //includes
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
 
 //defines
 #define MAXCHARS 2048
@@ -38,29 +40,62 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-void get_command(void){
+void get_command(void) {
 
-    //declare variables
-    char* command = (char*)malloc(MAXCHARS);
-    size_t len = 0;
+    //exit variable
+    int exit = 1;
 
-    //prompt user for input
-    fprintf(stdout, ": ");
+    do{
 
-    //flush the input
+        //variables for getline
+        char* command = NULL;
+        size_t len = 0;
+        ssize_t chars_read;
 
-    //get input from user
-    getline(&command, len, stdin);
+        //show prompt for command line
+        fprintf(stdout, ": ");
 
-    //look for new line and remove it
+        //flush the input
 
-    //parser
+        //get input from user
+        chars_read = getline(&command, len, stdin); //--> getline calls realloc if the buffer is not larger enough
 
-    //print
-    fprintf(stdout, "%s", command);
+        //check for error
+        //pass for now
 
-    //free dynamically allocated memory for command
-    free(command);
+        //check length of command didn't exceed MAXCHARS
+        if(strlen(command) > MAXCHARS){
+            
+            //print out message for user
+            fprintf(stdout, "command too long\n");
+
+            //free command (clean up)
+            free(command);
+
+            //continue next iteration
+            continue;
+
+        }
+
+        //look for new line and remove it
+
+        //parser
+
+        //print
+        fprintf(stdout, "%s", command);
+
+        //change exit variable if command = exit
+        if(!strcmp(command, "exit")){
+            exit = 0;
+        }
+
+        //free dynamically allocated memory for command(clean up)
+        free(command);
+
+        
+    }while(exit);
+
+
 }
 
 
