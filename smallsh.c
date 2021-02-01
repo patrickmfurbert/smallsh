@@ -91,13 +91,11 @@ char* get_command(void) {
 
 void parse_command(char* command){
         
-        //print
-        fprintf(stdout, "%s\n", command);
-
-        char *saveptr, *ptr, *token;
-        char *delimiter = " \t\n\r\a";
+        char *saveptr, *ptr, *token, *delimiter = " \t\n\r\a";
+        char **args = (char*)malloc(MAXARGS * sizeof(char*));
         char str[MAXCHARS];
-
+        int index = 0;
+        
         strcpy(str, command);
 
         for(token = strtok_r(str, delimiter, &saveptr);
@@ -106,12 +104,13 @@ void parse_command(char* command){
             {
                 if(token) 
                 {
-                    printf("%s\n", token);
+                    args[index++] = token; 
                 }
             }
 
-        
-
+        for(int i = 0; i < index; i++){
+            fprintf(stdout, "%s\n", args[i]);
+        }
 }
 
 
