@@ -23,7 +23,7 @@ Description:
 void start(void);
 char* get_command(void);
 struct command* parse_command(char* command);
-int run_command(char* command);
+int run_command(struct command* arguments);
 void free_args(struct command* arguments);
 
 //structs
@@ -35,10 +35,10 @@ struct command {
 //main
 int main(int argc, char** argv) {
 
-
+    //start the shell
     start();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 void start(void) {
@@ -59,7 +59,7 @@ void start(void) {
         args = parse_command(command);
 
         //do stuff
-        status = run_command(command);
+        status = run_command(args);
 
         //free dynamically allocated memory
         free(command);      //free the initial getline string
@@ -99,6 +99,7 @@ char* get_command(void) {
 
 struct command* parse_command(char* command){
         
+        //variables for parse_command
         char *saveptr, *token, *delimiter = " \t\n\r\a";
         char **args = (char**)malloc(MAXARGS * sizeof(char*));
         char str[MAXCHARS];
@@ -132,17 +133,29 @@ struct command* parse_command(char* command){
 }
 
 
-int run_command(char* command){
+int run_command(struct command* arguments){
 
     //execute
     int status = 1; //continues loop
 
-    if(!strcmp(command, "exit")){
-        status = 0;
+    //handles an empty command line or line that begins with #
+    if(arguments->num_args == 0 || arguments->args[0][0] == '#') 
+    {
+        return status; 
     }
+
+    //if the user types exit(needs to be replaced later)
+    if(!strcmp(arguments->args[0], "exit")){
+        status = 0;
+        return status;
+    }
+
+    //fill in for a command running
+    fprintf(stdout, "*****run command*****\n");
 
     return status;
 }
+
 
 void free_args(struct command* arguments){
     for(int i = 0; i<arguments->num_args; i++){
