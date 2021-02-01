@@ -61,9 +61,10 @@ void start(void) {
         //do stuff
         status = run_command(command);
 
-        //free memory
-        free(command);
-        free_args(args);
+        //free dynamically allocated memory
+        free(command);      //free the initial getline string
+        free_args(args);    //frees the stuff inside of the struct
+        free(args);         //frees the struct
 
     }while(status);
     
