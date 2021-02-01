@@ -13,6 +13,7 @@ Description:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/types.h>
 
 //defines
@@ -189,14 +190,31 @@ void free_args(struct command* arguments){
     free(arguments->args);
 }
 
+
 int exit_command(struct command* arguments)
 {
     return 0;
 }
+
+
 int cd_command(struct command* arguments)
 {
-    return 0;
+    //get environmental variable HOME
+    if(arguments->num_args == 1){
+            char* home = getenv("HOME");
+            if(chdir(home) != 0) {
+                perror("smallsh");
+            }
+    }else 
+    if (arguments->num_args == 2){
+            if(chdir(arguments->args[1]) != 0) {
+                perror("smallsh");
+            }
+    }
+    return 1;
 }
+
+
 int status_command(struct command* arguments)
 {
     return 0;
