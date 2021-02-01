@@ -22,10 +22,15 @@ Description:
 //forward functions declarations
 void start(void);
 char* get_command(void);
-void parse_command(char* command);
+struct command* parse_command(char* command);
 int run_command(char* command);
+void free_args(struct command* arguments);
 
-
+//structs
+struct command {
+    int num_args;
+    char** args;
+};
 
 //main
 int main(int argc, char** argv) {
@@ -38,7 +43,8 @@ int main(int argc, char** argv) {
 
 void start(void) {
 
-    char* command; 
+    char* command;
+    struct command* args; 
     int status; 
 
     do {
@@ -50,13 +56,14 @@ void start(void) {
         command = get_command();
 
         //parse input
-        parse_command(command);
+        args = parse_command(command);
 
         //do stuff
         status = run_command(command);
 
         //free memory
         free(command);
+        free_args(args);
 
     }while(status);
     
@@ -89,13 +96,15 @@ char* get_command(void) {
 }
 
 
-void parse_command(char* command){
+struct command* parse_command(char* command){
         
-        char *saveptr, *ptr, *token, *delimiter = " \t\n\r\a";
-        char **args = (char*)malloc(MAXARGS * sizeof(char*));
+        char *saveptr, *token, *delimiter = " \t\n\r\a";
+        char **args = (char**)malloc(MAXARGS * sizeof(char*));
         char str[MAXCHARS];
         int index = 0;
+        struct command* my_command = (struct command*)malloc(sizeof(struct command));
         
+        //copy the command into the string array
         strcpy(str, command);
 
         for(token = strtok_r(str, delimiter, &saveptr);
@@ -104,13 +113,21 @@ void parse_command(char* command){
             {
                 if(token) 
                 {
-                    args[index++] = token; 
+                    args[index] = (char*)malloc(sizeof(strlen(token)));
+                    strcpy(args[index++], token);
                 }
             }
 
         for(int i = 0; i < index; i++){
             fprintf(stdout, "%s\n", args[i]);
         }
+
+        fprintf(stdout, "num args = %d\n", index);
+
+        my_command->num_args = index;
+        my_command->args = args;
+
+        return my_command;
 }
 
 
@@ -125,3 +142,11 @@ int run_command(char* command){
 
     return status;
 }
+
+void free_args(struct command* arguments){
+    for(int i = 0; i<arguments->num_args; i++){
+        free(arguments->args[i]);
+    }
+    free(arguments->args);
+}
+
