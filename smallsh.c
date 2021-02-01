@@ -18,6 +18,7 @@ Description:
 //defines
 #define MAXCHARS 2048
 #define MAXARGS 512
+#define NUM_BUILT_INS 3
 
 //forward functions declarations
 void start(void);
@@ -26,13 +27,31 @@ struct command* parse_command(char* command);
 int run_command(struct command* arguments);
 void free_args(struct command* arguments);
 
+//declarations for built-in functions
+int exit_command(struct command* arguments);
+int cd_command(struct command* arguments);
+int status_command(struct command* arguments);
+
 //structs
 struct command {
     int num_args;
     char** args;
 };
 
-//main
+//globals
+char* built_in_commands[] = {
+    "exit",
+    "cd",
+    "status"
+};
+
+int (*built_in_functions[]) (struct command* arguments) = {
+    &exit_command,
+    &cd_command,
+    &status_command
+};
+
+//main function
 int main(int argc, char** argv) {
 
     //start the shell
@@ -135,7 +154,6 @@ struct command* parse_command(char* command){
 
 int run_command(struct command* arguments){
 
-    //execute
     int status = 1; //continues loop
 
     //handles an empty command line or line that begins with #
@@ -148,6 +166,13 @@ int run_command(struct command* arguments){
     if(!strcmp(arguments->args[0], "exit")){
         status = 0;
         return status;
+    }
+
+    //check for built-in commands
+    for(int i = 0; i<NUM_BUILT_INS; i++){
+        if(strcmp(arguments->args[0], built_in_commands[i]) == 0){
+            return (*built_in_functions[i])(arguments);
+        }
     }
 
     //fill in for a command running
@@ -164,3 +189,15 @@ void free_args(struct command* arguments){
     free(arguments->args);
 }
 
+int exit_command(struct command* arguments)
+{
+    return 0;
+}
+int cd_command(struct command* arguments)
+{
+    return 0;
+}
+int status_command(struct command* arguments)
+{
+    return 0;
+}
