@@ -90,8 +90,30 @@ char* get_command(void) {
 
 
 void parse_command(char* command){
+        
+        //print
         fprintf(stdout, "%s\n", command);
+
+        char *saveptr, *ptr, *token;
+        char *delimiter = " \t\n\r\a";
+        char str[MAXCHARS];
+
+        strcpy(str, command);
+
+        for(token = strtok_r(str, delimiter, &saveptr);
+            token != NULL;
+            token = strtok_r(NULL, delimiter, &saveptr))
+            {
+                if(token) 
+                {
+                    printf("%s\n", token);
+                }
+            }
+
+        
+
 }
+
 
 int run_command(char* command){
 

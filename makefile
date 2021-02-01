@@ -1,7 +1,7 @@
 TARGET = smallsh
 LIBS = -lm
 CC = gcc
-CFLAGS = -std=c99 -g -Wall
+CFLAGS = -std=gnu99 -g -Wall
 
 .PHONY: default all clean
 
