@@ -131,6 +131,12 @@ struct command* parse_command(char* command){
         //copy the command into the string array
         strcpy(str, command);
 
+        //check for $$ - variable expansion
+        if(strstr(command, "$$") != NULL){
+            pid_t pid = getpid();
+            string_replace(str, "$$", pid);
+        }
+
         for(token = strtok_r(str, delimiter, &saveptr);
             token != NULL;
             token = strtok_r(NULL, delimiter, &saveptr))
