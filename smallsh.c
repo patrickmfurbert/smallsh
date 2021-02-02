@@ -149,8 +149,8 @@ struct command* parse_command(char* command){
             {
                 if(token) 
                 {
-                    args[index] = (char*)malloc(sizeof(strlen(token)+1));
-                    strcpy(args[index++], token);
+                    args[index] = (char*)malloc((strlen(token)+1) * sizeof(char));
+                    strcpy(args[index++], token); //issue here
                 }
             }
 
