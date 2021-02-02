@@ -15,6 +15,7 @@ Description:
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 //defines
 #define MAXCHARS 2048
@@ -26,6 +27,7 @@ void start(void);
 char* get_command(void);
 struct command* parse_command(char* command);
 int run_command(struct command* arguments);
+int launch_execvp(struct command* arguments);
 void free_args(struct command* arguments);
 
 //declarations for built-in functions
@@ -140,11 +142,13 @@ struct command* parse_command(char* command){
                 }
             }
 
+        /*
         for(int i = 0; i < index; i++){
             fprintf(stdout, "%s\n", args[i]);
         }
 
         fprintf(stdout, "num args = %d\n", index);
+        */
 
         my_command->num_args = index;
         my_command->args = args;
@@ -177,10 +181,34 @@ int run_command(struct command* arguments){
     }
 
     //fill in for a command running
-    fprintf(stdout, "*****run command*****\n");
+    return launch_execvp(arguments);
 
     return status;
 }
+
+
+int launch_execvp(struct command* arguments){
+    pid_t pid, wpid;
+    int status;
+
+
+    if((pid = fork()) == 0){
+        if(execvp(arguments->args[0], arguments->args) == -1){
+            perror("smallsh");
+        }
+        exit(EXIT_FAILURE);
+    } else if (pid < 0 ) {
+        perror("smallsh");
+    } else {
+        do
+        {
+            wpid = waitpid(pid, &status, WUNTRACED);
+        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    }
+    
+    return 1;
+}
+
 
 
 void free_args(struct command* arguments){
@@ -202,12 +230,12 @@ int cd_command(struct command* arguments)
     //get environmental variable HOME
     if(arguments->num_args == 1){
             char* home = getenv("HOME");
-            if(chdir(home) != 0) {
+            if((chdir(home)) != 0) {
                 perror("smallsh");
             }
     }else 
     if (arguments->num_args == 2){
-            if(chdir(arguments->args[1]) != 0) {
+            if((chdir(arguments->args[1])) != 0) {
                 perror("smallsh");
             }
     }
