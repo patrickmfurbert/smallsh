@@ -29,6 +29,8 @@ struct command* parse_command(char* command);
 int run_command(struct command* arguments);
 int launch_execvp(struct command* arguments);
 void free_args(struct command* arguments);
+char* string_replace(char* source, char* substring, char* with);
+//char* pidt_to_string(pid_t num);
 
 //declarations for built-in functions
 int exit_command(struct command* arguments);
@@ -123,8 +125,9 @@ struct command* parse_command(char* command){
         
         //variables for parse_command
         char *saveptr, *token, *delimiter = " \t\n\r\a";
-        char **args = (char**)malloc(MAXARGS * sizeof(char*));
-        char str[MAXCHARS];
+        char** args = (char**)malloc(MAXARGS * sizeof(char*));
+        char* str = (char*)malloc(sizeof(char) * MAXCHARS);
+        //char str[MAXCHARS];
         int index = 0;
         struct command* my_command = (struct command*)malloc(sizeof(struct command));
         
@@ -132,9 +135,13 @@ struct command* parse_command(char* command){
         strcpy(str, command);
 
         //check for $$ - variable expansion
-        if(strstr(command, "$$") != NULL){
-            pid_t pid = getpid();
-            string_replace(str, "$$", pid);
+        if(strstr(str, "$$") != NULL){
+            int pid = getpid();
+            char mypid[21];
+            sprintf(mypid, "%d", pid);
+            do{
+                str = string_replace(str, "$$", mypid);
+            }while(strstr(str, "$$") != NULL);
         }
 
         for(token = strtok_r(str, delimiter, &saveptr);
@@ -220,6 +227,42 @@ void free_args(struct command* arguments){
     }
     free(arguments->args);
 }
+
+
+char* string_replace(char* source, char* substring, char* with){
+
+    char* substring_source;
+    char* source_cpy = source;
+    int difference;
+
+
+    //check if there is enough length for the replacement
+    if((difference = strlen(with) - strlen(substring)) > 0){
+        source_cpy = realloc(source_cpy, (strlen(source_cpy) + difference + 1) * sizeof(char));
+    }
+
+    if((substring_source = strstr(source_cpy, substring)) == NULL) {
+       return NULL;
+    }
+
+    memmove(
+        substring_source + strlen(with),
+        substring_source + strlen(substring),
+        strlen(substring_source) - strlen(substring) + 1
+    );
+
+    memcpy(substring_source, with, strlen(with));
+
+    return source_cpy;
+
+}
+
+// char* pidt_to_string(pid_t num){
+//     int length = snprintf(NULL, 0, "%jd", (intmax_t) num);
+//     char* str = malloc( length + 1 );
+//     snprintf(str, length + 1, "%d", num);
+//     return str;
+// }
 
 
 int exit_command(struct command* arguments)
