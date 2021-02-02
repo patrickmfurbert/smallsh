@@ -30,7 +30,6 @@ int run_command(struct command* arguments);
 int launch_execvp(struct command* arguments);
 void free_args(struct command* arguments);
 char* string_replace(char* source, char* substring, char* with);
-//char* pidt_to_string(pid_t num);
 
 //declarations for built-in functions
 int exit_command(struct command* arguments);
@@ -150,15 +149,14 @@ struct command* parse_command(char* command){
             {
                 if(token) 
                 {
-                    args[index] = (char*)malloc(sizeof(strlen(token)));
+                    args[index] = (char*)malloc(sizeof(strlen(token)+1));
                     strcpy(args[index++], token);
                 }
             }
 
+        args[index] = NULL;
 
-       if(index == 1){
-           args[1] = NULL;
-       }
+        free(str);
 
         my_command->num_args = index;
         my_command->args = args;
@@ -252,17 +250,9 @@ char* string_replace(char* source, char* substring, char* with){
     );
 
     memcpy(substring_source, with, strlen(with));
-
     return source_cpy;
 
 }
-
-// char* pidt_to_string(pid_t num){
-//     int length = snprintf(NULL, 0, "%jd", (intmax_t) num);
-//     char* str = malloc( length + 1 );
-//     snprintf(str, length + 1, "%d", num);
-//     return str;
-// }
 
 
 int exit_command(struct command* arguments)
