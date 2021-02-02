@@ -142,13 +142,6 @@ struct command* parse_command(char* command){
                 }
             }
 
-        /*
-        for(int i = 0; i < index; i++){
-            fprintf(stdout, "%s\n", args[i]);
-        }
-
-        fprintf(stdout, "num args = %d\n", index);
-        */
 
        if(index == 1){
            args[1] = NULL;
