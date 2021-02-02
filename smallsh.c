@@ -150,6 +150,10 @@ struct command* parse_command(char* command){
         fprintf(stdout, "num args = %d\n", index);
         */
 
+       if(index == 1){
+           args[1] = NULL;
+       }
+
         my_command->num_args = index;
         my_command->args = args;
 
