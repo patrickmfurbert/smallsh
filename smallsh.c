@@ -16,7 +16,9 @@ Description:
 #include <stdbool.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 //defines
 #define MAXCHARS 2048
@@ -233,15 +235,46 @@ int run_command(struct command* arguments){
 
 int launch_execvp(struct command* arguments){
     pid_t pid, wpid;
-    int status;
+    int status, output_file_descriptor, input_file_descriptor;
+    bool file_opened = false;
 
 
-    if((pid = fork()) == 0){
+
+
+    if((pid = fork()) == 0){ //fork child
+        //in the child
+        if(arguments->redirection){
+            file_opened = true;
+
+            //input redirection '<'
+            if(arguments->input_redir){
+                if((input_file_descriptor = open(arguments->input_redir, O_RDONLY)) < 0) {
+                    perror("Couldn't open input file");
+                    exit(1);
+                }
+                dup2(input_file_descriptor, STDIN_FILENO);
+                close(input_file_descriptor);
+            }
+
+            //output redirection '>'
+            if(arguments->output_redir){
+                if((output_file_descriptor = creat(arguments->output_redir, 0644)) < 0) {
+                    perror("Couldn't open the output file");
+                    exit(1);
+                }
+                dup2(output_file_descriptor, STDOUT_FILENO);
+                close(output_file_descriptor);
+            }
+
+        }
+
         if(execvp(arguments->args[0], arguments->args) == -1){
             perror("smallsh");
         }
         exit(EXIT_FAILURE);
     } else if (pid < 0 ) {
+        //in the parent
+
         perror("smallsh");
     } else {
         do
