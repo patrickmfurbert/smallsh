@@ -44,7 +44,7 @@ struct command {
     int num_args;
     char** args;
     char *output_redir, *input_redir;
-    bool redirection;
+    bool redirection, background;
 
 };
 
@@ -170,6 +170,7 @@ struct command* parse_command(char* command){
             token = strtok_r(NULL, delimiter, &saveptr))
             {
                 if(token){
+                    //if(strcmp(token, "&"));
                     if(my_command->redirection){
                         if(!strcmp(token, ">")){
                             token = strtok_r(NULL, delimiter, &saveptr);
@@ -193,6 +194,12 @@ struct command* parse_command(char* command){
             }
 
         args[index] = NULL;
+
+        //check for &
+        if(!strcmp(args[index-1], "&")){
+            args[--index] = NULL;
+            my_command->background = true;
+        }
 
         free(str);
 
