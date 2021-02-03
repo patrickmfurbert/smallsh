@@ -13,6 +13,7 @@ Description:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -40,6 +41,9 @@ int status_command(struct command* arguments);
 struct command {
     int num_args;
     char** args;
+    char *output_redir, *input_redir;
+    bool redirection;
+
 };
 
 //globals
@@ -126,10 +130,26 @@ struct command* parse_command(char* command){
         char *saveptr, *token, *delimiter = " \t\n\r\a";
         char** args = (char**)malloc(MAXARGS * sizeof(char*));
         char* str = (char*)malloc(sizeof(char) * MAXCHARS);
-        //char str[MAXCHARS];
+       // bool finished_args = false;
         int index = 0;
+
+        //struct initialization
         struct command* my_command = (struct command*)malloc(sizeof(struct command));
         
+        //redirection files
+        my_command->input_redir = NULL;
+        my_command->output_redir = NULL;
+
+        //check for background symbol
+
+        //check for redirection symbol
+        if((strstr(command,">") != NULL) || (strstr(command,"<") != NULL)){
+            my_command->redirection = true;
+        }
+        else{
+            my_command->redirection = false;
+        }
+
         //copy the command into the string array
         strcpy(str, command);
 
@@ -147,10 +167,26 @@ struct command* parse_command(char* command){
             token != NULL;
             token = strtok_r(NULL, delimiter, &saveptr))
             {
-                if(token) 
-                {
-                    args[index] = (char*)malloc((strlen(token)+1) * sizeof(char));
-                    strcpy(args[index++], token); //issue here
+                if(token){
+                    if(my_command->redirection){
+                        if(!strcmp(token, ">")){
+                            token = strtok_r(NULL, delimiter, &saveptr);
+                            my_command->output_redir = (char*)malloc((strlen(token)+1) * sizeof(char));
+                            strcpy(my_command->output_redir, token);
+                        }else if(!strcmp(token, "<")){
+                            token = strtok_r(NULL, delimiter, &saveptr);
+                            my_command->input_redir = (char*)malloc((strlen(token)+1) * sizeof(char));
+                            strcpy(my_command->input_redir, token);
+                        }else{
+                            args[index] = (char*)malloc((strlen(token)+1) * sizeof(char));
+                            strcpy(args[index++], token);
+                        }
+                    }
+                    else
+                    {
+                        args[index] = (char*)malloc((strlen(token)+1) * sizeof(char));
+                        strcpy(args[index++], token); 
+                    }
                 }
             }
 
@@ -220,10 +256,21 @@ int launch_execvp(struct command* arguments){
 
 
 void free_args(struct command* arguments){
+
+    if(arguments->output_redir){
+        free(arguments->output_redir);
+    }
+
+    if(arguments->input_redir){
+        free(arguments->input_redir);
+    }
+
     for(int i = 0; i<arguments->num_args; i++){
         free(arguments->args[i]);
     }
+
     free(arguments->args);
+
 }
 
 
