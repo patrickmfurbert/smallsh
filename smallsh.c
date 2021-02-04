@@ -19,6 +19,7 @@ Description:
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <errno.h>
 
 //defines
 #define MAXCHARS 2048
@@ -55,6 +56,10 @@ char* built_in_commands[] = {
     "status"
 };
 
+//exit status variable
+int exit_status = 0;
+
+//array of built-in functions
 int (*built_in_functions[]) (struct command* arguments) = {
     &exit_command,
     &cd_command,
@@ -80,6 +85,8 @@ void start(void) {
 
         //initiate prompt
         fprintf(stdout, ": ");
+        fflush(stdout);
+
         
         //get command line
         command = get_command();
@@ -196,9 +203,11 @@ struct command* parse_command(char* command){
         args[index] = NULL;
 
         //check for &
-        if(!strcmp(args[index-1], "&")){
+        if((index > 0) && !(strcmp(args[index-1], "&"))){
             args[--index] = NULL;
             my_command->background = true;
+        }else{
+            my_command->background = false;
         }
 
         free(str);
@@ -242,16 +251,12 @@ int run_command(struct command* arguments){
 
 int launch_execvp(struct command* arguments){
     pid_t pid, wpid;
-    int status, output_file_descriptor, input_file_descriptor;
-    bool file_opened = false;
-
-
-
+    int output_file_descriptor, input_file_descriptor;
 
     if((pid = fork()) == 0){ //fork child
         //in the child
+
         if(arguments->redirection){
-            file_opened = true;
 
             //input redirection '<'
             if(arguments->input_redir){
@@ -273,7 +278,12 @@ int launch_execvp(struct command* arguments){
                 close(output_file_descriptor);
             }
 
+        }else if(arguments->background){
+            freopen ("/dev/null", "w", stdout); // or "nul" instead of "/dev/null"
+            freopen ("/dev/null", "r", stdin); // or "nul" instead of "/dev/null" 
+            fcloseall();// closing all of the streams
         }
+
 
         if(execvp(arguments->args[0], arguments->args) == -1){
             perror("smallsh");
@@ -284,11 +294,25 @@ int launch_execvp(struct command* arguments){
 
         perror("smallsh");
     } else {
-        do
-        {
-            wpid = waitpid(pid, &status, WUNTRACED);
-        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+
+            if(arguments->background) {
+                wpid = waitpid(pid, &exit_status, WNOHANG);
+                fprintf(stdout, "background pid is %d\n", pid);
+                fflush(stdout);
+            }
+            else{
+                wpid = waitpid(pid, &exit_status, 0);
+            }
+
+            while ((pid = waitpid(-1, &exit_status, WNOHANG)) > 0) { // wait to read out children deaths
+                fprintf(stdout,"background pid %d is done: ", pid);
+                status_command(arguments); //status of the deceased child 
+                fflush(stdout);
+	        }
+
     }
+
+
     
     return 1;
 }
@@ -368,5 +392,13 @@ int cd_command(struct command* arguments)
 
 int status_command(struct command* arguments)
 {
-    return 0;
+    //existed by status
+    if (WIFEXITED(exit_status)){
+        fprintf(stdout, "exit value: %d\n", WEXITSTATUS(exit_status));
+    }
+    //exited by signal
+    else{
+        fprintf(stdout, "terminated by signal %d\n", WTERMSIG(exit_status));
+    }
+    return 1;
 }
