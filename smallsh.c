@@ -87,6 +87,7 @@ void start(void) {
     struct sigaction ignore = {0};
     ignore.sa_handler = SIG_IGN;
     sigaction(SIGINT, &ignore, NULL);
+    //sigaction(SIGTSTP, )
 
 
     //loop
@@ -297,6 +298,11 @@ int launch_execvp(struct command* arguments){
                 default_action.sa_handler = SIG_DFL;
                 sigaction(SIGINT, &default_action, NULL);
         }
+
+        //all commands background or not ignore SIGTSTP
+        struct sigaction ignore_action = {0};
+        ignore_action.sa_handler = SIG_IGN;
+        sigaction(SIGTSTP, &ignore_action, NULL);
 
         if(execvp(arguments->args[0], arguments->args) == -1){
             perror("smallsh");
