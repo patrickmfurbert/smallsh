@@ -20,6 +20,7 @@ Description:
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <signal.h>
 
 //defines
 #define MAXCHARS 2048
@@ -46,7 +47,6 @@ struct command {
     char** args;
     char *output_redir, *input_redir;
     bool redirection, background;
-
 };
 
 //globals
@@ -77,10 +77,19 @@ int main(int argc, char** argv) {
 
 void start(void) {
 
+    
+
     char* command;
     struct command* args; 
     int status; 
 
+    //ignore ctrl+c / SIGINT
+    struct sigaction ignore = {0};
+    ignore.sa_handler = SIG_IGN;
+    sigaction(SIGINT, &ignore, NULL);
+
+
+    //loop
     do {
 
         //initiate prompt
@@ -115,8 +124,6 @@ char* get_command(void) {
         ssize_t chars_read;
         char* command = (char*)malloc(len * sizeof(char));
         
-        //flush the input ?
-
         //get input from user
         chars_read = getline(&command, &len, stdin); //--> getline calls realloc if the buffer is not larger enough
 
@@ -284,16 +291,22 @@ int launch_execvp(struct command* arguments){
             fcloseall();// closing all of the streams
         }
 
+        if(!arguments->background){
+                //default ctrl+c / SIGINT
+                struct sigaction default_action = {0};
+                default_action.sa_handler = SIG_DFL;
+                sigaction(SIGINT, &default_action, NULL);
+        }
 
         if(execvp(arguments->args[0], arguments->args) == -1){
             perror("smallsh");
         }
         exit(EXIT_FAILURE);
     } else if (pid < 0 ) {
-        //in the parent
-
+        //fork returns -1 on failure
         perror("smallsh");
     } else {
+            //in the parent
 
             if(arguments->background) {
                 wpid = waitpid(pid, &exit_status, WNOHANG);
@@ -312,8 +325,6 @@ int launch_execvp(struct command* arguments){
 
     }
 
-
-    
     return 1;
 }
 
