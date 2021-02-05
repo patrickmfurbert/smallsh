@@ -35,6 +35,7 @@ int run_command(struct command* arguments);
 int launch_execvp(struct command* arguments);
 void free_args(struct command* arguments);
 char* string_replace(char* source, char* substring, char* with);
+void handle_sigtstp(int signo);
 
 //declarations for built-in functions
 int exit_command(struct command* arguments);
@@ -58,6 +59,8 @@ char* built_in_commands[] = {
 
 //exit status variable
 int exit_status = 0;
+bool background_allowed = true;
+bool sigtspted = false;
 
 //array of built-in functions
 int (*built_in_functions[]) (struct command* arguments) = {
@@ -84,10 +87,16 @@ void start(void) {
     int status; 
 
     //ignore ctrl+c / SIGINT
-    struct sigaction ignore = {0};
-    ignore.sa_handler = SIG_IGN;
-    sigaction(SIGINT, &ignore, NULL);
-    //sigaction(SIGTSTP, )
+    struct sigaction ignore_sigint = {0};
+    ignore_sigint.sa_handler = SIG_IGN;
+    sigaction(SIGINT, &ignore_sigint, NULL);
+
+    //handle ctrl+v / SIGTSTP
+    struct sigaction sigstsp_action = {0};
+    sigstsp_action.sa_handler = handle_sigtstp;
+    sigstsp_action.sa_flags = 0;
+    sigfillset(&sigstsp_action.sa_mask);
+    sigaction(SIGTSTP, &sigstsp_action, NULL);
 
 
     //loop
@@ -129,7 +138,9 @@ char* get_command(void) {
         chars_read = getline(&command, &len, stdin); //--> getline calls realloc if the buffer is not larger enough
 
         //check for error
-        //pass for now
+        if(chars_read == -1){
+            clearerr(stdin); //reset stdin status
+        }
         
         //replace '\n' with '\0'
         if(chars_read != -1 && command[chars_read-1] == '\n'){
@@ -172,54 +183,61 @@ struct command* parse_command(char* command){
 
         //check for $$ - variable expansion
         if(strstr(str, "$$") != NULL){
-            int pid = getpid();
-            char mypid[21];
+            int pid = getpid(); //get pid
+            char mypid[21]; //create arbitrary sized buffer to store PID
             sprintf(mypid, "%d", pid);
+            
+            //check for every occurence of $$ in string and replace with PID
             do{
                 str = string_replace(str, "$$", mypid);
             }while(strstr(str, "$$") != NULL);
         }
 
+        //use for loop structure for generating tokens
         for(token = strtok_r(str, delimiter, &saveptr);
             token != NULL;
             token = strtok_r(NULL, delimiter, &saveptr))
             {
+                //check if strtok returned pointer or NULL
                 if(token){
-                    //if(strcmp(token, "&"));
+                    //if there is redirection in the command we must find it
                     if(my_command->redirection){
-                        if(!strcmp(token, ">")){
-                            token = strtok_r(NULL, delimiter, &saveptr);
+                        if(!strcmp(token, ">")){ //found output redirection
+                            token = strtok_r(NULL, delimiter, &saveptr); //grab the next token 
                             my_command->output_redir = (char*)malloc((strlen(token)+1) * sizeof(char));
                             strcpy(my_command->output_redir, token);
-                        }else if(!strcmp(token, "<")){
-                            token = strtok_r(NULL, delimiter, &saveptr);
+                        }else if(!strcmp(token, "<")){ //found input redirection
+                            token = strtok_r(NULL, delimiter, &saveptr); //grab the next token
                             my_command->input_redir = (char*)malloc((strlen(token)+1) * sizeof(char));
                             strcpy(my_command->input_redir, token);
-                        }else{
-                            args[index] = (char*)malloc((strlen(token)+1) * sizeof(char));
+                        }else{ //loop as normal and add items to args
+                            args[index] = (char*)malloc((strlen(token)+1) * sizeof(char)); 
                             strcpy(args[index++], token);
                         }
                     }
                     else
-                    {
+                    {   //loop as normal and add items to args
                         args[index] = (char*)malloc((strlen(token)+1) * sizeof(char));
                         strcpy(args[index++], token); 
                     }
                 }
             }
 
+        //set the last element in args to NULL for execvp
         args[index] = NULL;
 
-        //check for &
-        if((index > 0) && !(strcmp(args[index-1], "&"))){
-            args[--index] = NULL;
-            my_command->background = true;
+        //check for & 
+        if((index > 0) && !(strcmp(args[index-1], "&"))){ // this line requires short-circuit && 
+            args[--index] = NULL; //change the & element to NULL
+            my_command->background = true; //set command struct background boolean to true
         }else{
-            my_command->background = false;
+            my_command->background = false; //not a background command and set attribute to false
         }
 
+        //free the dynamically allocated memory for str
         free(str);
 
+        //assign args len to num_args and the pointer to the array to args
         my_command->num_args = index;
         my_command->args = args;
 
@@ -228,8 +246,12 @@ struct command* parse_command(char* command){
 
 
 int run_command(struct command* arguments){
+     int status = 1; //continues loop
 
-    int status = 1; //continues loop
+    if(sigtspted){
+        sigtspted = false;
+        return true;
+    }
 
     //handles an empty command line or line that begins with #
     if(arguments->num_args == 0 || arguments->args[0][0] == '#') 
@@ -299,11 +321,12 @@ int launch_execvp(struct command* arguments){
                 sigaction(SIGINT, &default_action, NULL);
         }
 
-        //all commands background or not ignore SIGTSTP
+        //ignore ctrl + v SIGTSTP (background and foreground)
         struct sigaction ignore_action = {0};
         ignore_action.sa_handler = SIG_IGN;
         sigaction(SIGTSTP, &ignore_action, NULL);
 
+        //execute command and check for failure (-1)
         if(execvp(arguments->args[0], arguments->args) == -1){
             perror("smallsh");
         }
@@ -313,9 +336,8 @@ int launch_execvp(struct command* arguments){
         perror("smallsh");
     } else {
             //in the parent
-
             if(arguments->background) {
-                wpid = waitpid(pid, &exit_status, WNOHANG);
+                wpid = waitpid(pid, &exit_status, WNOHANG); 
                 fprintf(stdout, "background pid is %d\n", pid);
                 fflush(stdout);
             }
@@ -328,28 +350,30 @@ int launch_execvp(struct command* arguments){
                 status_command(arguments); //status of the deceased child 
                 fflush(stdout);
 	        }
-
     }
 
     return 1;
 }
 
 
-
 void free_args(struct command* arguments){
 
+    //free output redirection string
     if(arguments->output_redir){
         free(arguments->output_redir);
     }
 
+    //free input redirection string
     if(arguments->input_redir){
         free(arguments->input_redir);
     }
 
+    //free all arguments
     for(int i = 0; i<arguments->num_args; i++){
         free(arguments->args[i]);
     }
 
+    //free pointer to args
     free(arguments->args);
 
 }
@@ -418,4 +442,18 @@ int status_command(struct command* arguments)
         fprintf(stdout, "terminated by signal %d\n", WTERMSIG(exit_status));
     }
     return 1;
+}
+
+void handle_sigtstp(int signo){
+    //toggle background_allowed
+    background_allowed ? (background_allowed = false) : (background_allowed = true);
+
+    //print
+    char* exit = "\nExiting foreground-only mode\n";
+    char* enter = "\nEntering foreground-only mode(& is now ignored)\n";
+    background_allowed ? write(STDOUT_FILENO, exit, strlen(exit)) : write(STDOUT_FILENO, enter, strlen(enter));
+
+    sigtspted = true;
+    fflush(stdout);
+
 }
