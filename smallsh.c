@@ -229,7 +229,7 @@ struct command* parse_command(char* command){
         //check for & 
         if((index > 0) && !(strcmp(args[index-1], "&"))){ // this line requires short-circuit && 
             args[--index] = NULL; //change the & element to NULL
-            my_command->background = true; //set command struct background boolean to true
+            my_command->background = true & background_allowed; //set command struct background boolean to true
         }else{
             my_command->background = false; //not a background command and set attribute to false
         }
