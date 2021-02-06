@@ -84,8 +84,6 @@ int main(int argc, char** argv) {
 
 void start(void) {
 
-    
-
     char* command;
     struct command* args; 
     int status; 
@@ -102,7 +100,6 @@ void start(void) {
     sigfillset(&sigstsp_action.sa_mask);
     sigaction(SIGTSTP, &sigstsp_action, NULL);
 
-
     //loop
     do {
 
@@ -110,7 +107,6 @@ void start(void) {
         fprintf(stdout, ": ");
         fflush(stdout);
 
-        
         //get command line
         command = get_command();
 
@@ -127,13 +123,9 @@ void start(void) {
 
     }while(status);
 
-
-    printf("out of run loop. num processes: %d\n", process_counter);
-    int result;
+    //exiting the smallsh and killing all stored PIDs
     for ( int i= 0; i < process_counter; i++) {
-        printf("process: %d\n", pid_array[i]);
-        result = kill(pid_array[i], SIGTERM); // kill the pid    
-        printf("kill result: %d\n", result);
+         kill(pid_array[i], SIGTERM); // kill the pid    
     }
     
 }
@@ -261,11 +253,6 @@ struct command* parse_command(char* command){
 int run_command(struct command* arguments){
      int status = 1; //continues loop
 
-    // if(sigtspted){
-    //     sigtspted = false;
-    //     return true;
-    // }
-
     //handles an empty command line or line that begins with #
     if(arguments->num_args == 0 || arguments->args[0][0] == '#') 
     {
@@ -336,7 +323,6 @@ int launch_execvp(struct command* arguments){
         ignore_action.sa_handler = SIG_IGN;
         sigaction(SIGTSTP, &ignore_action, NULL);
 
-        printf("in child before execvp\n");
 
         //execute command and check for failure (-1)
         if(execvp(arguments->args[0], arguments->args) == -1){
@@ -355,7 +341,6 @@ int launch_execvp(struct command* arguments){
             }
             else{
 
-                printf("int parent before wait for child\n");
                 wpid = waitpid(pid, &exit_status, 0);
             }
 
@@ -427,8 +412,6 @@ void store_pid(pid_t pid){
 
 int exit_command(struct command* arguments)
 {
-    
-    printf("exited!!!!\n");   
     return 0;
 }
 
@@ -473,7 +456,6 @@ void handle_sigtstp(int signo){
     char* enter = "\nEntering foreground-only mode(& is now ignored)\n";
     background_allowed ? write(STDOUT_FILENO, exit, strlen(exit)) : write(STDOUT_FILENO, enter, strlen(enter));
 
-   // sigtspted = true;
     fflush(stdout);
 
 }
