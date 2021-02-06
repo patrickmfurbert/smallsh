@@ -22,6 +22,7 @@ Description:
 #include <errno.h>
 #include <signal.h>
 
+
 //defines
 #define MAXCHARS 2048
 #define MAXARGS 512
@@ -34,6 +35,7 @@ struct command* parse_command(char* command);
 int run_command(struct command* arguments);
 int launch_execvp(struct command* arguments);
 void free_args(struct command* arguments);
+void store_pid(pid_t pid);
 char* string_replace(char* source, char* substring, char* with);
 void handle_sigtstp(int signo);
 
@@ -57,8 +59,10 @@ char* built_in_commands[] = {
     "status"
 };
 
-//exit status variable
+//global variables
 int exit_status = 0;
+int process_counter = 0;
+int pid_array[500]; 
 bool background_allowed = true;
 bool sigtspted = false;
 
@@ -122,6 +126,15 @@ void start(void) {
         free(args);         //frees the struct
 
     }while(status);
+
+
+    printf("out of run loop. num processes: %d\n", process_counter);
+    int result;
+    for ( int i= 0; i < process_counter; i++) {
+        printf("process: %d\n", pid_array[i]);
+        result = kill(pid_array[i], SIGTERM); // kill the pid    
+        printf("kill result: %d\n", result);
+    }
     
 }
 
@@ -248,21 +261,15 @@ struct command* parse_command(char* command){
 int run_command(struct command* arguments){
      int status = 1; //continues loop
 
-    if(sigtspted){
-        sigtspted = false;
-        return true;
-    }
+    // if(sigtspted){
+    //     sigtspted = false;
+    //     return true;
+    // }
 
     //handles an empty command line or line that begins with #
     if(arguments->num_args == 0 || arguments->args[0][0] == '#') 
     {
         return status; 
-    }
-
-    //if the user types exit(needs to be replaced later)
-    if(!strcmp(arguments->args[0], "exit")){
-        status = 0;
-        return status;
     }
 
     //check for built-in commands
@@ -283,7 +290,10 @@ int launch_execvp(struct command* arguments){
     pid_t pid, wpid;
     int output_file_descriptor, input_file_descriptor;
 
-    if((pid = fork()) == 0){ //fork child
+    pid = fork();
+    store_pid(pid);
+
+    if(pid == 0){ //fork child
         //in the child
 
         if(arguments->redirection){
@@ -326,6 +336,8 @@ int launch_execvp(struct command* arguments){
         ignore_action.sa_handler = SIG_IGN;
         sigaction(SIGTSTP, &ignore_action, NULL);
 
+        printf("in child before execvp\n");
+
         //execute command and check for failure (-1)
         if(execvp(arguments->args[0], arguments->args) == -1){
             perror("smallsh");
@@ -342,6 +354,8 @@ int launch_execvp(struct command* arguments){
                 fflush(stdout);
             }
             else{
+
+                printf("int parent before wait for child\n");
                 wpid = waitpid(pid, &exit_status, 0);
             }
 
@@ -406,9 +420,15 @@ char* string_replace(char* source, char* substring, char* with){
 
 }
 
+void store_pid(pid_t pid){
+    pid_array[process_counter++] = pid;
+}
+
 
 int exit_command(struct command* arguments)
 {
+    
+    printf("exited!!!!\n");   
     return 0;
 }
 
@@ -453,7 +473,7 @@ void handle_sigtstp(int signo){
     char* enter = "\nEntering foreground-only mode(& is now ignored)\n";
     background_allowed ? write(STDOUT_FILENO, exit, strlen(exit)) : write(STDOUT_FILENO, enter, strlen(enter));
 
-    sigtspted = true;
+   // sigtspted = true;
     fflush(stdout);
 
 }
