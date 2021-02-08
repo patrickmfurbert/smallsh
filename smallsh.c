@@ -6,7 +6,7 @@ Class: CS344 - Operating Systems
 
 
 /*
-Description:
+Description: 
 */
 
 //includes
@@ -36,7 +36,7 @@ int run_command(struct command* arguments);
 int launch_execvp(struct command* arguments);
 void free_args(struct command* arguments);
 void store_pid(pid_t pid);
-char* string_replace(char* source, char* substring, char* with);
+char* string_replace(char* source, char* substring, char* new_string);
 void handle_sigtstp(int signo);
 
 //declarations for built-in functions
@@ -44,7 +44,7 @@ int exit_command(struct command* arguments);
 int cd_command(struct command* arguments);
 int status_command(struct command* arguments);
 
-//structs
+//struct that holds information for command
 struct command {
     int num_args;
     char** args;
@@ -52,18 +52,16 @@ struct command {
     bool redirection, background;
 };
 
-//globals
+//global variables
 char* built_in_commands[] = {
     "exit",
     "cd",
     "status"
 };
-
-//global variables
-int exit_status = 0;
-int process_counter = 0;
-int pid_array[500]; 
-bool background_allowed = true;
+int exit_status = 0; //holds value of exit status
+int process_counter = 0; //counter for number of processes created
+int pid_array[500];  //array for number of process
+bool background_allowed = true; //boolean for allowing background processes
 bool sigtspted = false;
 
 //array of built-in functions
@@ -274,7 +272,7 @@ int run_command(struct command* arguments){
 
 
 int launch_execvp(struct command* arguments){
-    pid_t pid, wpid;
+    pid_t pid;
     int output_file_descriptor, input_file_descriptor;
 
     pid = fork();
@@ -335,13 +333,13 @@ int launch_execvp(struct command* arguments){
     } else {
             //in the parent
             if(arguments->background) {
-                wpid = waitpid(pid, &exit_status, WNOHANG); 
+                waitpid(pid, &exit_status, WNOHANG); 
                 fprintf(stdout, "background pid is %d\n", pid);
                 fflush(stdout);
             }
             else{
 
-                wpid = waitpid(pid, &exit_status, 0);
+                waitpid(pid, &exit_status, 0);
             }
 
             while ((pid = waitpid(-1, &exit_status, WNOHANG)) > 0) { // wait to read out children deaths
@@ -377,8 +375,8 @@ void free_args(struct command* arguments){
 
 }
 
-
-char* string_replace(char* source, char* substring, char* with){
+//substring replace function
+char* string_replace(char* source, char* substring, char* new_string){
 
     char* substring_source;
     char* source_cpy = source;
@@ -386,30 +384,34 @@ char* string_replace(char* source, char* substring, char* with){
 
 
     //check if there is enough length for the replacement
-    if((difference = strlen(with) - strlen(substring)) > 0){
+    if((difference = strlen(new_string) - strlen(substring)) > 0){
         source_cpy = realloc(source_cpy, (strlen(source_cpy) + difference + 1) * sizeof(char));
     }
 
+    //if there is no substring return null
     if((substring_source = strstr(source_cpy, substring)) == NULL) {
        return NULL;
     }
 
+    //move part after substring spaces over to make room for new string
     memmove(
-        substring_source + strlen(with),
+        substring_source + strlen(new_string),
         substring_source + strlen(substring),
         strlen(substring_source) - strlen(substring) + 1
     );
 
-    memcpy(substring_source, with, strlen(with));
+    //copy the new string into the spot of the substring
+    memcpy(substring_source, new_string, strlen(new_string));
     return source_cpy;
 
 }
 
+//store processes in pid array
 void store_pid(pid_t pid){
     pid_array[process_counter++] = pid;
 }
 
-
+//initiate exit process
 int exit_command(struct command* arguments)
 {
     return 0;
