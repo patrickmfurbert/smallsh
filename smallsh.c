@@ -4,9 +4,8 @@ Date: 1/28/2021
 Class: CS344 - Operating Systems
 */
 
-
 /*
-Description: 
+Description: smallsh shell emulator written in c - can execute typical commands found in bash shell
 */
 
 //includes
@@ -80,6 +79,7 @@ int main(int argc, char** argv) {
     return EXIT_SUCCESS;
 }
 
+//start the shell portion of the program
 void start(void) {
 
     char* command;
@@ -128,9 +128,8 @@ void start(void) {
     
 }
 
-
+//get command from the user
 char* get_command(void) {
-
 
         //variables for getline
         size_t len = MAXCHARS;
@@ -151,10 +150,9 @@ char* get_command(void) {
         }
 
         return command;
-
 }
 
-
+//parse command 
 struct command* parse_command(char* command){
         
         //variables for parse_command
@@ -170,8 +168,6 @@ struct command* parse_command(char* command){
         //redirection files
         my_command->input_redir = NULL;
         my_command->output_redir = NULL;
-
-        //check for background symbol
 
         //check for redirection symbol
         if((strstr(command,">") != NULL) || (strstr(command,"<") != NULL)){
@@ -247,7 +243,7 @@ struct command* parse_command(char* command){
         return my_command;
 }
 
-
+//run the parsed command
 int run_command(struct command* arguments){
      int status = 1; //continues loop
 
@@ -270,13 +266,14 @@ int run_command(struct command* arguments){
     return status;
 }
 
-
+//launching execvp after fork in child process
 int launch_execvp(struct command* arguments){
+
     pid_t pid;
     int output_file_descriptor, input_file_descriptor;
 
-    pid = fork();
-    store_pid(pid);
+    pid = fork(); //fork child process
+    store_pid(pid); //store the process id of the child process
 
     if(pid == 0){ //fork child
         //in the child
@@ -338,12 +335,11 @@ int launch_execvp(struct command* arguments){
                 fflush(stdout);
             }
             else{
-
                 waitpid(pid, &exit_status, 0);
             }
 
             while ((pid = waitpid(-1, &exit_status, WNOHANG)) > 0) { // wait to read out children deaths
-                fprintf(stdout,"background pid %d is done: ", pid);
+                fprintf(stdout,"background pid %d is done: ", pid); //print out that the background process has completed
                 status_command(arguments); //status of the deceased child 
                 fflush(stdout);
 	        }
@@ -352,7 +348,7 @@ int launch_execvp(struct command* arguments){
     return 1;
 }
 
-
+//free up the dynamically allocated memory in the command struct
 void free_args(struct command* arguments){
 
     //free output redirection string
@@ -417,7 +413,7 @@ int exit_command(struct command* arguments)
     return 0;
 }
 
-
+//change directory command
 int cd_command(struct command* arguments)
 {
     //get environmental variable HOME
@@ -435,7 +431,7 @@ int cd_command(struct command* arguments)
     return 1;
 }
 
-
+//print out the status of completed command(process)
 int status_command(struct command* arguments)
 {
     //existed by status
@@ -449,6 +445,7 @@ int status_command(struct command* arguments)
     return 1;
 }
 
+//toggle if background commands are allowed
 void handle_sigtstp(int signo){
     //toggle background_allowed
     background_allowed ? (background_allowed = false) : (background_allowed = true);
@@ -459,5 +456,4 @@ void handle_sigtstp(int signo){
     background_allowed ? write(STDOUT_FILENO, exit, strlen(exit)) : write(STDOUT_FILENO, enter, strlen(enter));
 
     fflush(stdout);
-
 }
